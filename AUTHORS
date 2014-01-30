@@ -1,0 +1,21 @@
+Main files
+----------
+
+Simon Josefsson <simon@yubico.com>
+Fredrik Thulin <fredrik@yubico.com>
+
+
+Patches
+-------
+
+Erinn Looney-Triggs <erinn.looneytriggs@gmail.com>
+Documentation.
+
+Romain Riviere <lecoyote@lecoyote.org>
+Debug macro fixes.
+
+Nanakos Chrysostomos <nanakos@wired-net.gr>
+Security fix.
+
+Alex Dubois <alex@bowabos.com>
+Rewrite to only have local yubikey authentication on Qubes
