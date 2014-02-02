@@ -36,9 +36,9 @@
 
 //#include <sys/types.h>
 //#include <sys/stat.h>
-//#include <fcntl.h>
+#include <fcntl.h>
 //#include <unistd.h>
-//#include <errno.h>
+#include <errno.h>
 #include <string.h>
 //#include <pwd.h>
 
@@ -81,7 +81,7 @@ struct cfg
   char *client_pwd;
   int debug;
   int alwaysok;
-//  int verbose_otp;
+  int verbose_otp;
   int try_first_pass;
   int use_first_pass;
   enum key_mode mode;

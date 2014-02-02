@@ -34,6 +34,8 @@
 #ifndef __PAM_YUBICO_UTIL_H_INCLUDED__
 #define __PAM_YUBICO_UTIL_H_INCLUDED__
 
+//#include <stdio.h>
+
 #if defined(DEBUG_PAM)
 # if defined(HAVE_SECURITY__PAM_MACROS_H)
 #  define DEBUG
