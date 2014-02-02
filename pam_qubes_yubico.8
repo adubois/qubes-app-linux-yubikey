@@ -1,0 +1,117 @@
+.\" Copyright (c) 2013 Yubico AB
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions are
+.\" met:
+.\"
+.\"     * Redistributions of source code must retain the above copyright
+.\"       notice, this list of conditions and the following disclaimer.
+.\"
+.\"     * Redistributions in binary form must reproduce the above
+.\"       copyright notice, this list of conditions and the following
+.\"       disclaimer in the documentation and/or other materials provided
+.\"       with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" The following commands are required for all man pages.
+.de URL
+\\$2 \(laURL: \\$1 \(ra\\$3
+..
+.if \n[.g] .mso www.tmac
+.TH pam_qubes_yubikey "8" "February 2014" "qubes-yubikey-pam"
+.SH NAME
+pam_qubes_yubikey - Module for Qubes OS to integrate Yubikey authentication through a USB VM
+.SH SYNOPSIS
+.B pam_qubes_yubikey
+[...]
+.SH DESCRIPTION
+The Qubes Yubikey provides an easy way to integrate the Yubikey into your existing Qubes user authentication in order to mitigate the risk of having someone or something snooping on your keyboard while you type your password.
+.TP
+It has been designed to be used with a USB AppVM to protect against USB based attacks.
+.SH INTRODUCTION
+Qubes Yubikey is composed of a front-end which capture the Yubikey OTP, of a back-end which makes it available for consuption in dom0 and of a PAM Module which validates the OTP. A password can also be configured to be part of your credentials and mitigate the risk of getting your Yubikey lost or stolen.
+.TP
+To protect Dom0 from attacks via USB, a USB AppVM capturing all the PCI devices on which USB controllers are connected must be configured (with possibly the exception of the controller managing your keyboard and touchpad if you have such hardware and no other USB devices are/can be connected to this USB controller).
+.SH PASSING THE OTP FROM THE USB VM TO DOM0
+The Qubes Yubikey front-end has been designed to be installed in a USB AppVM. After configuration, it will detect when you insert a Yubikey in your USB port. You then have to press the Yubikey button once. The OTP is captured by the Qubes Yubikey front-end. When you remove the Yubikey from the USB port, the Qubes Yubikey front-end detects this event and transmit via qrexec the OTP to Dom0. This behavior is to prevent you from forgetting your Yubikey in the USB port.
+.TP
+The Qubes Yubikey back-end just take the OTP and store it in a file in Dom0.
+.SH USAGE
+The Qubes Yubikey PAM module, will request for a yubikey OTP and a Password.
+.TP
+Insert the Yubikey, press the button and remove the key, then, if you have configured it, type your Yubikey associated password and hit enter.
+.TP
+If the OTP validation fails, the Qubes yubikey PAM module assumes that the USB AppVM is compromised and will not accept further Yubikey authentication until
+you clean the system up.
+.TP
+You can however still authenticate with your original Unix password from a location where snooping is not a risk.
+.SH QUBES YUBIKEY PAM MODULE LOGIC
+First the PAM module will parse the password and make it available to other PAM modules.
+.TP
+If the password is correct, the OTP will be read from the file the back-end wrote. The OTP is then decrypted; its CRC checked; validation will be done to ensure that the OTP was generated as the first button press after insertion in the USB port and that the counter is the next consecutive value only (to prevent replay attacks).
+.SH OPTIONS
+.B debug
+Turns on debugging to STDOUT
+.TP
+If you are using "debug" you may find it useful to create a world-writable log file:
+.RS
+touch /var/run/pam-debug.log
+.TP
+chmod go+w /var/run/pam-debug.log
+.TP
+.B alwaysok
+Set to enable all authentication attempts to succeed (aka presentation mode).
+.TP
+.B pwd
+The password used to authenticate in conjunction to the Yubikey OTP.
+.TP
+.B aeskey
+Your Yubikey key symetric AES key.
+.TP
+.B try_first_pass
+Before prompting the user for their password, the module first tries the previous stacked module´s password in case that satisfies this module as well.
+.TP
+.B use_first_pass
+The argument use_first_pass forces the module to use a previous stacked modules password and will never prompt the user - if no password is available or the password is not appropriate, the user will be denied access.
+.TP
+.B verbose_otp
+This argument is used to show the OTP (One Time Password) when it is entered, i.e. to enable terminal echo of entered characters.  You are advised to not use this, if you are using two factor authentication because that will display your password on the screen.  This requires the service using the PAM module to display custom fields.  For example, OpenSSH requires you to configure "ChallengeResponseAuthentication no".
+.TP
+.B last_login_path
+Path to the file last_login which store if the module has detected a potentional compromise of the USB AppVM, the last OTP and the last counter against which authentication was successful.
+.TP
+Default is /var/yubikey/last_login
+.TP
+.B otp_path
+Path to the file where the Qubes Yubikey back-end writes the OTP received from the USB AppVM and where the Qubes Yubikey PAM module reads it.
+.TP
+Default is /var/yubikey/yubikey.otp
+.SH EXAMPLES
+.RS
+auth sufficient pam_yubico.so id=16 debug
+.TP
+auth required pam_yubico.so mode=challenge-response
+.SH BUGS
+Report yubico-pam bugs in
+.URL "https://github.com/Yubico/yubico-pam/issues/" "the issue tracker"
+.SH "SEE ALSO"
+The
+.URL "http://opensource.yubico.com/yubico-pam/" "yubico-pam home page"
+.PP
+\fBykpamcfg\fR(1),
+\fBpam\fR(7)
+.PP
+YubiKeys can be obtained from
+.URL "https://www.yubico.com/" "Yubico" "."

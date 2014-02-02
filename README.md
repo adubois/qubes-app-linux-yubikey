@@ -103,7 +103,18 @@ On dom0 install the Qubes Yubikey back-end and PAM module:
 Qubes Yubikey front-end configuration
 -------------------------------------
 
-TODO
+Once you have installed the Qubes Yubikey front-end package on a new USB VM...
+
+The USB port you will use to connect the USB VM is configured to point to an
+input device. In order to easily identify it,
+- Insert the Yubikey in the port you will use in the future to authenticate
+- type the following
+------
+/usr/local/bin/ykinput.sh
+------
+Replace the device value in the following file:
+------
+vi /rw/config/udev/rules.d/99-qubes-usb-yubikey.rules
 
 
 Qubes Yubikey back-end configuration
