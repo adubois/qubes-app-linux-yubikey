@@ -81,7 +81,7 @@ struct cfg
   char *client_pwd;
   int debug;
   int alwaysok;
-  int verbose_otp;
+//  int verbose_otp;
   int try_first_pass;
   int use_first_pass;
   enum key_mode mode;
@@ -158,7 +158,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   /* validating aeskey */
   if ((aeskey == NULL) || (strlen (aeskey) != 32)) {
     D(("aeskey configured is of the WRONG length."));
-    errstr = "error: Invalid PAM Module configuration. An Hex encoded AES-key must be provided and of 32 characters.\n";
+    errstr = "error: Invalid PAM Module configuration. A 32 characters Hex encoded AES-key must be provided.\n";
     goto otp_validated;
   } else {
     D(("aeskey configured is of the right length."));
@@ -202,9 +202,9 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     D(("Last login file is all OK."));
   }
   r = fscanf(f, "%d:%32[a-z]:%d", &was_compromised, previous_token, &previous_counter);
-  D(("Was compromised:%d", was_compromised));
-  D(("Previous Token:%s", previous_token));
-  D(("Previous Counter:%d", previous_counter));
+  D(("Last login value read: Was compromised:%d", was_compromised));
+  D(("Last Login value read: Previous Token:%s", previous_token));
+  D(("Last Login valur read: Previous Counter:%d", previous_counter));
 
   if (fclose(f) < 0) {
     f = NULL;
@@ -254,15 +254,15 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     errstr = "fdopen error.";
     goto otp_validated;
   } else {
-    D(("File is all OK."));
+    D(("OTP file is all OK."));
   }
 
   r = fscanf(f, "%32[a-z]", token);
   if(r == 1) {
     D(("Token=%s", token));
     yubikey_modhex_decode ((char *) key, token, TOKEN_OTP_LEN);
-    D(("Key=%s", key));
-    D(("AESLey=%s", aeskey));
+    D(("Key=%s", &key));
+    D(("AESKey=%s", aeskey));
     yubikey_hex_decode ((char *) key, aeskey, TOKEN_OTP_LEN);
     D(("Key=%s", key));
     yubikey_parse ((uint8_t *) token, key, &tok);
