@@ -1,0 +1,3 @@
+#!/bin/sh
+read arg1
+echo $arg1 > /var/yubikey/yubikey.otp
