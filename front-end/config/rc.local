@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cp /rw/config/udev/rules.d/99-qubes-usb-yubikey.rules /etc/udev/rules.d
+

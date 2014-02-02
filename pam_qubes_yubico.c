@@ -277,13 +277,14 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
 
     /* Has this OTP been the first OTP generated after key insertion */
     if (tok.use != 0) {
-      D(("not a power up OTP"));
+      D(("Not a power up OTP"));
       is_compromised = 1;
       goto otp_validated;
     }
-    D(("crc OK"));
-    D(("session use: %d (0x%02x)\n", tok.use, tok.use));
+    D(("CRC OK"));
+    D(("Session use: %d (0x%02x)\n", tok.use, tok.use));
     counter = yubikey_counter (tok.ctr);
+    D(("Yubikey counter: %d",counter));
 
     /* Has the OTP been replayed? */
     if (previous_counter + 1 > counter) {

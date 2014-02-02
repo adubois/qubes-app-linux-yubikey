@@ -1,0 +1,2 @@
+ACTION=="add", SUBSYSTEM=="hid", ATTRS{idVendor}=="1050", ATTRS{idProduct}=="0010", ENV{REMOVE_CMD}="/usr/local/bin/ykremoved.sh", RUN+="/usr/local/bin/ykgetotp.py /dev/input/eventX"
+
