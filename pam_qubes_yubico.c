@@ -30,17 +30,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-//#include <stdarg.h>
-//#include <ctype.h>
-//#include <syslog.h>
-
-//#include <sys/types.h>
-//#include <sys/stat.h>
 #include <fcntl.h>
-//#include <unistd.h>
 #include <errno.h>
 #include <string.h>
-//#include <pwd.h>
 
 #include "util.h"
 #include "yubikey.h"
@@ -155,13 +147,11 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   int previous_counter = -1;
   int counter = -1;
 
-  /* validating aeskey */
+  /* validating aeskey length*/
   if ((aeskey == NULL) || (strlen (aeskey) != 32)) {
     D(("aeskey configured is of the WRONG length."));
     errstr = "error: Invalid PAM Module configuration. A 32 characters Hex encoded AES-key must be provided.\n";
     goto otp_validated;
-  } else {
-    D(("aeskey configured is of the right length."));
   }
 
   /* getting last otp login information */
@@ -170,8 +160,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     D(("Cannot open file: %s (%s)", last_login_path, strerror(errno)));
     errstr = "error: Unable to open last login file.\n";
     goto otp_validated;
-  } else {
-    D(("Last login file opened."));
   }
 
   if (fstat(fd, &st) < 0) {
@@ -179,8 +167,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     close(fd);
     errstr = "error: Unable to stat last login file.\n";
     goto otp_validated;
-  } else {
-    D(("Last login file stated."));
   }
 
   if (!S_ISREG(st.st_mode)) {
@@ -188,8 +174,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     close(fd);
     errstr = "error: Last login file is not a regular file.\n";
     goto otp_validated;
-  } else {
-    D(("Last login file is a regular file."));
   }
 
   f = fdopen(fd, "r");
@@ -198,13 +182,12 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     close(fd);
     errstr = "fdopen error.";
     goto otp_validated;
-  } else {
-    D(("Last login file is all OK."));
   }
+
   r = fscanf(f, "%d:%32[a-z]:%d", &was_compromised, previous_token, &previous_counter);
-  D(("Last login value read: Was compromised:%d", was_compromised));
-  D(("Last Login value read: Previous Token:%s", previous_token));
-  D(("Last Login valur read: Previous Counter:%d", previous_counter));
+  D(("Last login: Was compromised:%d", was_compromised));
+  D(("Last Login: Previous Token:%s", previous_token));
+  D(("Last Login: Previous Counter:%d", previous_counter));
 
   if (fclose(f) < 0) {
     f = NULL;
@@ -214,8 +197,9 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   }
 
   f = NULL;
+
   if (was_compromised != 0) {
-    D(("Authentication method cannot be trusted due to suspiscious activity during last login."));
+    D(("Authentication method cannot be trusted anymore due to suspiscious activity during last login."));
     goto otp_validated;
   }
 
@@ -225,8 +209,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     D(("Cannot open file: %s (%s)", otp_path, strerror(errno)));
     errstr = "error: Unable to open OTP file.\n";
     goto otp_validated;
-  } else {
-    D(("OTP file opened."));
   }
 
   if (fstat(fd, &st) < 0) {
@@ -234,8 +216,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     close(fd);
     errstr = "error: Unable to stat OTP file.\n";
     goto otp_validated;
-  } else {
-    D(("OPT file stated."));
   }
 
   if (!S_ISREG(st.st_mode)) {
@@ -243,8 +223,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     close(fd);
     errstr = "error: OTP file is not a regular file.\n";
     goto otp_validated;
-  } else {
-    D(("OTP file is a regular file."));
   }
 
   f = fdopen(fd, "r");
@@ -253,15 +231,13 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     close(fd);
     errstr = "fdopen error.";
     goto otp_validated;
-  } else {
-    D(("OTP file is all OK."));
   }
 
   r = fscanf(f, "%32[a-z]", token);
   if(r == 1) {
     D(("Token=%s", token));
     yubikey_modhex_decode ((char *) key, token, TOKEN_OTP_LEN);
-    D(("Key=%s", &key));
+    D(("Key=%s", key));
     D(("AESKey=%s", aeskey));
     yubikey_hex_decode ((char *) key, aeskey, TOKEN_OTP_LEN);
     D(("Key=%s", key));
@@ -274,6 +250,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
       is_compromised = 1;
       goto otp_validated;
     }
+    D(("CRC OK"));
 
     /* Has this OTP been the first OTP generated after key insertion */
     if (tok.use != 0) {
@@ -281,21 +258,21 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
       is_compromised = 1;
       goto otp_validated;
     }
-    D(("CRC OK"));
     D(("Session use: %d (0x%02x)\n", tok.use, tok.use));
+
+    /* Has the OTP been replayed? */
     counter = yubikey_counter (tok.ctr);
     D(("Yubikey counter: %d",counter));
 
-    /* Has the OTP been replayed? */
     if (previous_counter + 1 > counter) {
-      D(("Replayed token"));
+      D(("Replayed token. Counter is lower than expected value."));
       is_compromised = 1;
       goto otp_validated; 
     }
 
     /* Is the OTP the next consecutive OTP? */
     if (previous_counter + 1 < counter) {
-        D(("A token was lost"));
+        D(("A token was lost. Counter is higher than expected value."));
         is_compromised = 1;
         goto otp_validated;
     }
@@ -319,27 +296,21 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     if (fd < 0) {
       D(("Cannot open file: %s (%s)", last_login_path, strerror(errno)));
       errstr = "error: Unable to open for write last login file.\n";
-      goto otp_validated;
-    } else {
-      D(("Last login file opened for write."));
+      goto out;
     }
 
     if (fstat(fd, &st) < 0) {
       D(("Cannot stat file: %s (%s)", last_login_path, strerror(errno)));
       close(fd);
       errstr = "error: Unable to stat last login file.\n";
-      goto otp_validated;
-    } else {
-      D(("OPT file stated."));
+      goto out;
     }
 
     if (!S_ISREG(st.st_mode)) {
       D(("%s is not a regular file", last_login_path));
       close(fd);
       errstr = "error: Last login file is not a regular file.\n";
-      goto otp_validated;
-    } else {
-      D(("Last login file is a regular file."));
+      goto out;
     }
 
     f = fdopen(fd, "w");
@@ -347,7 +318,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
       D(("fdopen: %s", strerror(errno)));
       close(fd);
       errstr = "fdopen error.";
-      goto otp_validated;
+      goto out;
     } else {
       D(("Last login file is all OK."));
       rewind(f);
@@ -358,10 +329,10 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
      // if (ftruncate(fd, 0))
        // goto out;
       if (is_compromised != 0) {
-        D(("Writing that the authentication method just got compromised."));
+        D(("Saving that the authentication method just got compromised."));
         fprintf(f, "%d", is_compromised);
       } else {
-	D(("Writting the last OTP and counter down."));
+	D(("Saving the last OTP and counter down."));
         fprintf(f, "%d:%s:%d", is_compromised, token, counter);
       }
 
@@ -372,7 +343,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
         goto out;
     }
   } else {
-    D(("Not modifying last_login as already compromised."));
+    D(("Not saving last_login, already compromised."));
   }
   out:
   if (errstr)
@@ -380,245 +351,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   D(("Final OTP validation returned=%d", otp_valid));
   return otp_valid;
 }  
-//#if HAVE_CR
-//static int
-//do_challenge_response(pam_handle_t *pamh, struct cfg *cfg, const char *username)
-//{
-//  char *userfile = NULL, *tmpfile = NULL;
-//  FILE *f = NULL;
-//  char buf[CR_RESPONSE_SIZE + 16], response_hex[CR_RESPONSE_SIZE * 2 + 1];
-//  int ret, fd;
-
-//  unsigned int response_len = 0;
-//  YK_KEY *yk = NULL;
-//  CR_STATE state;
-
-//  const char *errstr = NULL;
-
-//  struct passwd *p;
-//  struct stat st;
-
-  /* we must declare two sepparate privs structures as they can't be reused */
-//  PAM_MODUTIL_DEF_PRIVS(privs);
-//  PAM_MODUTIL_DEF_PRIVS(privs2);
-
-//  ret = PAM_AUTH_ERR;
-
-//  if (! init_yubikey(&yk)) {
-//    DBG(("Failed initializing YubiKey"));
-//    goto out;
-//  }
-
-//  if (! check_firmware_version(yk, false, true)) {
-//    DBG(("YubiKey does not support Challenge-Response (version 2.2 required)"));
-//    goto out;
-//  }
-
-
-//  if (! get_user_challenge_file (yk, cfg->chalresp_path, username, &userfile)) {
-//    DBG(("Failed getting user challenge file for user %s", username));
-//    goto out;
-//  }
-
-//  DBG(("Loading challenge from file %s", userfile));
-
-//  p = getpwnam (username);
-//  if (p == NULL) {
-//      DBG (("getpwnam: %s", strerror(errno)));
-//      goto out;
-//  }
-
-  /* Drop privileges before opening user file. */
-//  if (pam_modutil_drop_priv(pamh, &privs, p)) {
-//      DBG (("could not drop privileges"));
-//      goto out;
-//  }
-
-//  fd = open(userfile, O_RDONLY, 0);
-//  if (fd < 0) {
-//      DBG (("Cannot open file: %s (%s)", userfile, strerror(errno)));
-//      goto restpriv_out;
-//  }
-
-//  if (fstat(fd, &st) < 0) {
-//      DBG (("Cannot stat file: %s (%s)", userfile, strerror(errno)));
-//      close(fd);
-//      goto restpriv_out;
-//  }
-
-//  if (!S_ISREG(st.st_mode)) {
-//      DBG (("%s is not a regular file", userfile));
-//      close(fd);
-//      goto restpriv_out;
-//  }
-
-//  f = fdopen(fd, "r");
-//  if (f == NULL) {
-//      DBG (("fdopen: %s", strerror(errno)));
-//      close(fd);
-//      goto restpriv_out;
-//  }
-
-//  if (! load_chalresp_state(f, &state, cfg->debug))
-//    goto restpriv_out;
-
-//  if (fclose(f) < 0) {
-//    f = NULL;
-//    goto restpriv_out;
-//  }
-//  f = NULL;
-
-//  if (pam_modutil_regain_priv(pamh, &privs)) {
-//      DBG (("could not restore privileges"));
-//      goto out;
-//  }
-
-//  if (! challenge_response(yk, state.slot, state.challenge, state.challenge_len,
-//			   true, true, false,
-//			   buf, sizeof(buf), &response_len)) {
-//    DBG(("Challenge-response FAILED"));
-//    goto out;
-//  }
-
-  /*
-   * Check YubiKey response against the expected response
-   */
-
-//  yubikey_hex_encode(response_hex, buf, response_len);
-//  if(state.salt_len > 0) { // the expected response has gone through pbkdf2
-//    YK_PRF_METHOD prf_method = {20, yk_hmac_sha1};
-//    yk_pbkdf2(response_hex, (unsigned char*)state.salt, state.salt_len, state.iterations,
-//        (unsigned char*)buf, response_len, &prf_method);
-//  }
-
-//  if (memcmp(buf, state.response, state.response_len) == 0) {
-//    ret = PAM_SUCCESS;
-//  } else {
-//    DBG(("Unexpected C/R response : %s", response_hex));
-//    goto out;
-//  }
-
-//  DBG(("Got the expected response, generating new challenge (%i bytes).", CR_CHALLENGE_SIZE));
-
-//  errstr = "Error generating new challenge, please check syslog or contact your system administrator";
-//  if (generate_random(state.challenge, sizeof(state.challenge))) {
-//    DBG(("Failed generating new challenge!"));
-//    goto out;
-//  }
-
-//  errstr = "Error communicating with Yubikey, please check syslog or contact your system administrator";
-//  if (! challenge_response(yk, state.slot, state.challenge, CR_CHALLENGE_SIZE,
-//			   true, true, false,
-//			   buf, sizeof(buf), &response_len)) {
-//    DBG(("Second challenge-response FAILED"));
-//    goto out;
-//  }
-
-  /* There is a bug that makes the YubiKey 2.2 send the same response for all challenges
-     unless HMAC_LT64 is set, check for that here */
-//  if (memcmp(buf, state.response, state.response_len) == 0) {
-//    errstr = "Same response for second challenge, YubiKey should be reconfigured with the option HMAC_LT64";
-//    goto out;
-//  }
-
-  /* the yk_* functions leave 'junk' in errno */
-//  errno = 0;
-
-  /*
-   * Write the challenge and response we will expect the next time to the state file.
-   */
-//  if (response_len > sizeof(state.response)) {
-//    DBG(("Got too long response ??? (%u/%lu)", response_len, (unsigned long) sizeof(state.response)));
-//    goto out;
-//  }
-//  memcpy (state.response, buf, response_len);
-//  state.response_len = response_len;
-
-  /* point to the fresh privs structure.. */
-//  privs = privs2;
-  /* Drop privileges before creating new challenge file. */
-//  if (pam_modutil_drop_priv(pamh, &privs, p)) {
-//      DBG (("could not drop privileges"));
-//      goto out;
-//  }
-
-  /* Write out the new file */
-//  tmpfile = malloc(strlen(userfile) + 1 + 4);
-//  if (! tmpfile)
-//    goto restpriv_out;
-//  strcpy(tmpfile, userfile);
-//  strcat(tmpfile, ".tmp");
-
-//  fd = open(tmpfile, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-//  if (fd < 0) {
-//      DBG (("Cannot open file: %s (%s)", tmpfile, strerror(errno)));
-//      goto restpriv_out;
-//  }
-
-//  f = fdopen(fd, "w");
-//  if (! f) {
-//    close(fd);
-//    goto restpriv_out;
-//  }
-
-//  errstr = "Error updating Yubikey challenge, please check syslog or contact your system administrator";
-//  if (! write_chalresp_state (f, &state))
-//    goto out;
-//  if (fclose(f) < 0) {
-//    f = NULL;
-//    goto restpriv_out;
-//  }
-//  f = NULL;
-//  if (rename(tmpfile, userfile) < 0) {
-//    goto restpriv_out;
-//  }
-
-//  if (pam_modutil_regain_priv(pamh, &privs)) {
-//      DBG (("could not restore privileges"));
-//      goto out;
-//  }
-
-//  DBG(("Challenge-response success!"));
-//  errstr = NULL;
-//  errno = 0;
-//  goto out;
-
-//restpriv_out:
-//  if (pam_modutil_regain_priv(pamh, &privs)) {
-//      DBG (("could not restore privileges"));
-//  }
-
-// out:
-//  if (yk_errno) {
-//    if (yk_errno == YK_EUSBERR) {
-//      syslog(LOG_ERR, "USB error: %s", yk_usb_strerror());
-//      DBG(("USB error: %s", yk_usb_strerror()));
-//    } else {
-//      syslog(LOG_ERR, "Yubikey core error: %s", yk_strerror(yk_errno));
-//      DBG(("Yubikey core error: %s", yk_strerror(yk_errno)));
-//    }
-//  }
-
-//  if (errstr)
-//    display_error(pamh, errstr);
-
-//  if (errno) {
-//    syslog(LOG_ERR, "Challenge response failed: %s", strerror(errno));
-//    DBG(("Challenge response failed: %s", strerror(errno)));
-//  }
-
-//  if (yk)
-//    yk_close_key(yk);
-//  yk_release();
-
-//  if (f)
-//    fclose(f);
-
-//  free(userfile);
-//  free(tmpfile);
-//  return ret;
-//}
-//#endif /* HAVE_CR */
 
 static void
 parse_cfg (int flags, int argc, const char **argv, struct cfg *cfg)
@@ -699,17 +431,6 @@ pam_sm_authenticate (pam_handle_t * pamh,
       DBG (("get user returned error: %s", pam_strerror (pamh, retval)));
       goto done;
     }
-  DBG (("get user returned: %s", user));
-
-//  if (cfg->mode == CHRESP) {
-//#if HAVE_CR
-//    return do_challenge_response(pamh, cfg, user);
-//#else
-//    DBG (("no support for challenge/response"));
-//    retval = PAM_AUTH_ERR;
-//    goto done;
-//#endif
-//  }
 
   if (cfg->try_first_pass || cfg->use_first_pass)
     {
@@ -729,32 +450,6 @@ pam_sm_authenticate (pam_handle_t * pamh,
       retval = PAM_AUTH_ERR;
       goto done;
     }
-
-//  rc = ykclient_init (&ykc);
-//  if (rc != YKCLIENT_OK)
-//    {
-//      DBG (("ykclient_init() failed (%d): %s", rc, ykclient_strerror (rc)));
-//      retval = PAM_AUTHINFO_UNAVAIL;
-//      goto done;
-//    }
-
-//  rc = ykclient_set_client_b64 (ykc, cfg->client_id, cfg->client_key);
-//  if (rc != YKCLIENT_OK)
-//    {
-//      DBG (("ykclient_set_client_b64() failed (%d): %s",
-//	    rc, ykclient_strerror (rc)));
-//      retval = PAM_AUTHINFO_UNAVAIL;
-//      goto done;
-//    }
-
-//  if (cfg->client_key)
-//    ykclient_set_verify_signature (ykc, 1);
-
-//  if (cfg->capath)
-//    ykclient_set_ca_path (ykc, cfg->capath);
-
-//  if (cfg->url)
-//    ykclient_set_url_template (ykc, cfg->url);
 
   if (password == NULL)
     {
@@ -845,31 +540,8 @@ pam_sm_authenticate (pam_handle_t * pamh,
         retval = PAM_AUTH_ERR;
         goto done;
       }
-//  rc = ykclient_request (ykc, otp);
 
-//  DBG (("ykclient return value (%d): %s", rc,
-//	ykclient_strerror (rc)));
-
-//  switch (rc)
-//    {
-//    case YKCLIENT_OK:
-//      break;
-
-//    case YKCLIENT_BAD_OTP:
-//    case YKCLIENT_REPLAYED_OTP:
-//      retval = PAM_AUTH_ERR;
-//      goto done;
-
-//    default:
-//      retval = PAM_AUTHINFO_UNAVAIL;
-//      goto done;
-//    }
-
-  /* authorize the user with supplied token id */
-//  if (cfg->ldapserver != NULL || cfg->ldap_uri != NULL)
-//    valid_token = authorize_user_token_ldap (cfg, user, otp_id);
-//  else
-//    valid_token = authorize_user_token (cfg, user, otp_id, pamh);
+/* never called ???*/
   valid_token = -1;
   switch(valid_token)
     {
@@ -894,8 +566,6 @@ pam_sm_authenticate (pam_handle_t * pamh,
     }
 
 done:
-//  if (ykc)
-//    ykclient_done (&ykc);
   if (cfg->alwaysok && retval != PAM_SUCCESS)
     {
       DBG (("alwaysok needed (otherwise return with %d)", retval));
