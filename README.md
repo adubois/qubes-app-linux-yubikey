@@ -84,7 +84,7 @@ symetric key.
 
 On this new USB AppVM (not its template) install the Qubes Yubikey front-end:
 ------
-  $ sudo yum install qubes-app-linux-yubikey-front-end
+  $ sudo yum install qubes-yubikey-vm
 ------
 
 This package will install:
@@ -96,7 +96,7 @@ This package will install:
 
 On dom0 install the Qubes Yubikey back-end and PAM module:
 ------
-  $ sudo yum install qubes-app-linux-yubikey-back-end
+  $ sudo yum install qubes-yubikey-dom0
 ------
 
 
