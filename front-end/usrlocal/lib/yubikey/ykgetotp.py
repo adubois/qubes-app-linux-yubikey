@@ -22,13 +22,11 @@ while event:
 
     if type == 1 and value == 1:
         if code == 28:
-#            subprocess.call(["/usr/lib/qubes/qrexec_client_vm", "dom0", "qubes.2fa", "/bin/echo", yubikey_otp])
             f = open('/home/user/.yubikey','w')
             f.write(yubikey_otp[-32:])
             f.close
-            print(yubikey_otp)
             yubikey_otp = ""
-            break
+            exit
         else:
             yubikey_otp = yubikey_otp + key_map[code]
 

@@ -50,8 +50,9 @@ Usage
 
 The Qubes Yubikey PAM module, will request for a Yubikey OTP and a Password.
 
-Insert the Yubikey, press the button and remove the key. This will store the OTP
-on the back-end. Then, type your Yubikey associated password and hit enter.
+Insert the Yubikey, press the button and remove the key. This will intercept the
+OTP in the USB VM and transmit it to Dom0. Then, type your Yubikey associated
+password and hit enter.
 
 If the password and OTP you entered are correct, you will be authenticated
 successfully.
@@ -75,6 +76,11 @@ You will go to a secure location to authenticate with your Unix password, delete
 the USB VM, create a new one and re-install the Qubes PAM Yubikey front-end as
 well as re-configure the PAM Yubikey module in Dom0.
 
+It is important to be aware that side channel attacks for exemple by sampling
+the USB port power current draw during OTP generation may be able to compromise
+the AES key stored in your Yubikey as well as the power-up counter.
+However this type of attack has so far not been publicly demonstrated.
+
 
 Qubes Yubikey PAM module logic
 ------------------------------
@@ -96,34 +102,42 @@ First create a brand new USB AppVM. It is important that this VM is clean as
 you are going to use it initially to configure your Yubikey and set its AES
 symetric key.
 
-On this new USB AppVM (not its template) install the Qubes Yubikey front-end:
+On this new USB AppVM install the Yubico personalisation package:
   $ sudo yum install ykpers
+This package will install the Yubikey personalisation package to allow you to
+configure the Yubikey.
+This package will NOT be persisted after a reboot of the USB Ap-VM, which is
+the desired behaviour as the USB AppVM may become compromised in the future.
+
+Once personalisation is done, you can destroy the USB VM and create a new one
+(not mandatory but recommended to mitigate against potential personalisation
+stalled data).
+
+you can then install in the USB VM's template the following:
   $ sudo yum install qubes-yubikey-vm
 
-This package will install:
-- The Yubikey personalisation package to allow you to configure the Yubikey.
-  This package will NOT be persisted after a reboot of the USB Ap-VM, which is
-  the desired behaviour as the USB AppVM may become compromised in the future.
-- The Qubes Yubikey front-end in /rw to ensure persistance after reboot of the
-  USB AppVM.
-
-On dom0 install the Qubes Yubikey back-end and PAM module:
+And on dom0 install the Qubes Yubikey back-end and PAM modules:
   $ sudo yum install qubes-yubikey-dom0
+
 
 Qubes Yubikey personalisation
 -----------------------------
+
+Please refer to the ykpers module personalization module. it is recommended
+that the AES key you select is generated from a random source you trust.
 
 
 Qubes Yubikey front-end configuration
 -------------------------------------
 
-The USB port you will use to connect the USB VM is configured to point to an
-input device. In order to easily identify it,
+The USB port you will use to connect the Yubikey is configured to point to an
+input device. In order to easily identify it:
 - Insert the Yubikey in the port you will use in the future to authenticate and
   type:
   $ /usr/local/bin/ykinput.sh
 
-And follow the instructions displayed on the screen.
+And follow the instructions displayed on the screen to configure the Qubes
+Yubikey front-end..
 
 
 Qubes Yubikey back-end configuration
@@ -137,15 +151,19 @@ Qubes Yubikey PAM Module Configuration
 
 You will need to configure the Qubes Yubikey PAM module for the xscreensaver
 programs. In /etc/pam.d/, edit xscreensaver by adding the following line as the first line:
-  auth sufficient pam_qubes_yubikey.so debug pwd=mypassword aeskey=1234567890ABCDEF1234567890ABCDEF
+  auth sufficient pam_qubes_yubikey.so pwd=mypassword aeskey=1234567890ABCDEF1234567890ABCDEF
 
 To prevent from locking yourself out, You may want to try first to play with
-setup and edit /etc/pam.d/setup.
+setup (a program which require elevated privileges but that does not lock input
+if you are not able to authenticate) and edit /etc/pam.d/setup. The following
+may be the first line you may want to configure:
+  auth sufficient pam_qubes-yubikey.so alwaysok debug pwd=mypassword aeskey=1234567890ABCDEF1234567890ABCDEF
 
 Supported PAM module parameters are:
 
   "pwd":            The password used to authenticate in conjunction to the
-                    Yubikey OTP.
+                    Yubikey OTP. It is highly recommended that no correlation
+                    exist between this password and the Unix system password.
 
   "aeskey":         Your Yubikey key symetric AES key.
 
@@ -171,10 +189,11 @@ Supported PAM module parameters are:
                      Yubikey PAM module reads it.
                      Default is /var/yubikey/yubikey.otp
 
-If you are using "debug" you may find it useful to create a
-world-writable log file:
+If you are using "debug" you may find it useful to create a world-writable log
+file:
   touch /var/run/pam-debug.log
   chmod go+w /var/run/pam-debug.log
+
 
 Configuring last_login
 ----------------------
@@ -189,6 +208,7 @@ The first value is:
 The second value is the last OTP.
 
 The third value is the last counter.
+
 
 Feedback
 --------
@@ -220,6 +240,10 @@ Get libyubikey from
 
   http://opensource.yubico.com/yubico-c/
 
+Please note that AES encryption/decryption is hard coded in this library. This
+imply that a review of this code is recommended, particularly in the field of
+side channel attacks (CPU L2 cache, power drain).
+
 
 Preparing the build
 -------------------
@@ -247,6 +271,7 @@ The build system uses Autoconf, to set up the build system run:
 
 Then build the code, run the self-test and install the binaries:
   make check
+
 
 Post build installation
 -----------------------
