@@ -144,7 +144,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   int r;
   uint8_t key[TOKEN_OTP_LEN];
   yubikey_token_st tok;
-  int previous_counter = -1;
   int counter = -1;
 
   /* validating aeskey length*/
@@ -184,9 +183,8 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     goto otp_validated;
   }
 
-  r = fscanf(f, "%d:%32[a-z]:%d", &was_compromised, previous_token, &previous_counter);
+  r = fscanf(f, "%d:%d", &was_compromised, &previous_counter);
   D(("Last login: Was compromised:%d", was_compromised));
-  D(("Last Login: Previous Token:%s", previous_token));
   D(("Last Login: Previous Counter:%d", previous_counter));
 
   if (fclose(f) < 0) {
@@ -290,7 +288,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   f = NULL;
   otp_validated:
 
-  /* Need to write to last_login compromised:token:counter if compromised was not already == 1 */
+  /* Need to write to last_login compromised:token:counter if we were not already compromised */
   if (was_compromised == 0) {
     fd = open(last_login_path, O_WRONLY, 0);
     if (fd < 0) {
@@ -329,11 +327,11 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
      // if (ftruncate(fd, 0))
        // goto out;
       if (is_compromised != 0) {
-        D(("Saving that the authentication method just got compromised."));
-        fprintf(f, "%d", is_compromised);
+        D(("Saving that the authentication method just got compromised and the counter"));
+        fprintf(f, "%d:%d", is_compromised, counter);
       } else {
-	D(("Saving the last OTP and counter down."));
-        fprintf(f, "%d:%s:%d", is_compromised, token, counter);
+	D(("Saving the counter down."));
+        fprintf(f, "%d:%d", is_compromised, counter);
       }
 
       if (fflush(f) < 0)
@@ -350,7 +348,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     display_error(pamh, errstr); 
   D(("Final OTP validation returned=%d", otp_valid));
   return otp_valid;
-}  
+}
 
 static void
 parse_cfg (int flags, int argc, const char **argv, struct cfg *cfg)
