@@ -50,36 +50,40 @@ Usage
 
 The Qubes Yubikey PAM module, will request for a Yubikey OTP and a Password.
 
-Insert the Yubikey, press the button and remove the key. This will intercept the
-OTP in the USB VM and transmit it to Dom0. Then, type your Yubikey associated
-password and hit enter.
+First insert the Yubikey, press the button only once and remove the key. The
+removal of the key will trigger the transmission of the OTP to Dom0.
+Then, type your Yubikey associated password and hit enter.
 
 If the password and OTP you entered are correct, you will be authenticated
 successfully.
 
 If the authentication fails, you can try to retype the password and press enter
 as you may have done a typo.
-
 Do not generate a new OTP as you would expose yourself to hold and play attacks.
-The attacker could retain the first OTP until you issued a second one, at
-which time the attacker can send the first one, holding the next valid token
+The attacker could retain the first OTP until you issued a second one, at which
+time the attacker can send the first one, holding the next valid token
 for the next time you are away. This type of attacks would however only succeed
 if you typed a wrong password while the USB VM decided to hold your OTP.
 
 Once you have typed the correct password, if the authentication fails, it is
-assumed that the USB VM is compromised and the authentication method locks
-itself out.
+assumed that the USB VM may be compromised and the OTP authentication method
+locks itself out.
 
-It is assumed that if you are not able to authenticate successfully following a
-Single Yubikey Insert/KeyPress/Remove you will not leave your laptop unattended.
-You will go to a secure location to authenticate with your Unix password, delete
-the USB VM, create a new one and re-install the Qubes PAM Yubikey front-end as
-well as re-configure the PAM Yubikey module in Dom0.
+If you are not able to authenticate successfully following a Single Yubikey
+Insert/KeyPress/Remove you must not leave your laptop unattended as a valid OTP
+may have been held in the USB VM.
+You must go to a secure location to authenticate with your Unix password.
+Then check the value of last_login's first character.
+If 0 check the password you set in the xscreensaver PAM configuration.
+If the password is the one you typed you need to delete and recreate the USB VM
+and re-install the front-end.
+If 1 you will also need to 
 
-It is important to be aware that side channel attacks for exemple by sampling
-the USB port power current draw during OTP generation may be able to compromise
-the AES key stored in your Yubikey as well as the power-up counter.
-However this type of attack has so far not been publicly demonstrated.
+Note that side channel attacks by sampling the USB port power current draw
+directly or indirectly during OTP generation may be able to compromise the AES
+key stored in your Yubikey as well as the power-up counter.
+Such type of attacks have been demonstrated, however as of Feb 2014 such attack
+as not been publicly demonstrated on Yubikey.
 
 
 Qubes Yubikey PAM module logic
@@ -123,34 +127,34 @@ And on dom0 install the Qubes Yubikey back-end and PAM modules:
 Qubes Yubikey personalisation
 -----------------------------
 
-Please refer to the ykpers module personalization module. it is recommended
-that the AES key you select is generated from a random source you trust.
+Please refer to the ykpers module documentation. it is recommended that the AES
+key you select is generated from a random source you trust.
 
 
 Qubes Yubikey front-end configuration
 -------------------------------------
 
-The USB port you will use to connect the Yubikey is configured to point to an
-input device. In order to easily identify it:
+The USB port you will use to connect the Yubikey is mapped to an input device.
+In order to easily identify it:
 - Insert the Yubikey in the port you will use in the future to authenticate and
   type:
   $ /usr/local/bin/ykinput.sh
-
-And follow the instructions displayed on the screen to configure the Qubes
+Then follow the instructions displayed on the screen to configure the Qubes
 Yubikey front-end..
 
 
 Qubes Yubikey back-end configuration
 ------------------------------------
 
-TODO
+No configuration required.
 
 
 Qubes Yubikey PAM Module Configuration
 --------------------------------------
 
 You will need to configure the Qubes Yubikey PAM module for the xscreensaver
-programs. In /etc/pam.d/, edit xscreensaver by adding the following line as the first line:
+programs. In /etc/pam.d/, edit xscreensaver by adding the following line as the
+first line:
   auth sufficient pam_qubes_yubikey.so pwd=mypassword aeskey=1234567890ABCDEF1234567890ABCDEF
 
 To prevent from locking yourself out, You may want to try first to play with
@@ -199,15 +203,15 @@ Configuring last_login
 ----------------------
 
 last_login stores the state of the last authentication if the form:
-0:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:123:
+0:123:
 
 The first value is:
 - 0 when the OTP authentication method is not compromised.
 - 1 when the OTP authentication method is compromised and locked.
+Re-setting this value to 0 should only be done during initial configuration
+with a new USB VM.
 
-The second value is the last OTP.
-
-The third value is the last counter.
+The second value is the last counter.
 
 
 Feedback

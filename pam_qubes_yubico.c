@@ -288,7 +288,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   f = NULL;
   otp_validated:
 
-  /* Need to write to last_login compromised:token:counter if we were not already compromised */
+  /* Need to write to last_login compromised:counter if we were not already compromised */
   if (was_compromised == 0) {
     fd = open(last_login_path, O_WRONLY, 0);
     if (fd < 0) {
