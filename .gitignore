@@ -16,3 +16,6 @@
 *.exe
 *.out
 *.app
+
+# Qubes packages
+pkgs/
