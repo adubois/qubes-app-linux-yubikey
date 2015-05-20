@@ -238,6 +238,10 @@ Get libyubikey from
 
   http://opensource.yubico.com/yubico-c/
 
+It is also available in Fedora repository, so you can install it with:
+
+  yum install libyubikey libyubikey-devel
+
 Please note that AES encryption/decryption is hard coded in this library. This
 imply that a review of this code is recommended, particularly in the field of
 side channel attacks (CPU L2 cache, power drain).
