@@ -37,6 +37,16 @@ rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
 rm -f $RPM_BUILD_ROOT/%{_lib}/security/pam_qubes_yubico.la
 
+install -d $RPM_BUILD_ROOT/usr/bin
+install back-end/usr/bin/qyk2fa $RPM_BUILD_ROOT/usr/bin/
+install -d $RPM_BUILD_ROOT%{_sysconfdir}/qubes-rpc/policy
+install -m 0664 back-end/etc/qubes_rpc/qubes.2fa $RPM_BUILD_ROOT%{_sysconfdir}/qubes-rpc/
+install -m 0664 back-end/etc/qubes_rpc/policy/qubes.2fa $RPM_BUILD_ROOT%{_sysconfdir}/qubes-rpc/policy/
+install -m 0775 -d $RPM_BUILD_ROOT/var/yubikey
+install -m 0664 back-end/var/yubikey/last_login $RPM_BUILD_ROOT/var/yubikey/
+install -m 0664 back-end/var/yubikey/yubikey.otp $RPM_BUILD_ROOT/var/yubikey/
+
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -44,7 +54,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc NEWS README.md COPYING AUTHORS
 /%{_lib}/security/pam_qubes_yubico.so
 %{_mandir}/man8/pam_qubes_yubico.8.gz
-
+/usr/bin/qyk2fa
+%config(noreplace) %attr(0664,root,qubes) %{_sysconfdir}/qubes-rpc/qubes.2fa
+%config(noreplace) %attr(0664,root,qubes) %{_sysconfdir}/qubes-rpc/policy/qubes.2fa
+%dir %attr(2775,root,qubes) /var/yubikey
+%ghost %attr(0664,root,qubes) /var/yubikey/last_login
+%ghost %attr(0664,root,qubes) /var/yubikey/yubikey.otp
 
 %changelog
 
