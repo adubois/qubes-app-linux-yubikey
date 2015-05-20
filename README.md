@@ -134,13 +134,7 @@ key you select is generated from a random source you trust.
 Qubes Yubikey front-end configuration
 -------------------------------------
 
-The USB port you will use to connect the Yubikey is mapped to an input device.
-In order to easily identify it:
-- Insert the Yubikey in the port you will use in the future to authenticate and
-  type:
-  $ /usr/local/bin/ykinput.sh
-Then follow the instructions displayed on the screen to configure the Qubes
-Yubikey front-end..
+No configuration required.
 
 
 Qubes Yubikey back-end configuration
