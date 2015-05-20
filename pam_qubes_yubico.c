@@ -137,7 +137,6 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   int fd;
   struct stat st;
   FILE *f = NULL;
-  char previous_token[TOKEN_OTP_LEN + 1];
   char token[TOKEN_OTP_LEN + 1];
   uint8_t is_compromised = 0;
   uint8_t was_compromised = 1;
@@ -145,6 +144,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
   uint8_t key[TOKEN_OTP_LEN];
   yubikey_token_st tok;
   int counter = -1;
+  int previous_counter;
 
   /* validating aeskey length*/
   if ((aeskey == NULL) || (strlen (aeskey) != 32)) {
@@ -183,7 +183,7 @@ is_yubikey_otp_valid(pam_handle_t *pamh, const char *aeskey, const char *last_lo
     goto otp_validated;
   }
 
-  r = fscanf(f, "%d:%d", &was_compromised, &previous_counter);
+  r = fscanf(f, "%hhu:%d", &was_compromised, &previous_counter);
   D(("Last login: Was compromised:%d", was_compromised));
   D(("Last Login: Previous Counter:%d", previous_counter));
 
@@ -406,12 +406,10 @@ PAM_EXTERN int
 pam_sm_authenticate (pam_handle_t * pamh,
 		     int flags, int argc, const char **argv)
 {
-  int retval, rc;
+  int retval;
   const char *user = NULL;
   const char *password = NULL;
-  char otp[TOKEN_OTP_LEN + 1] = { 0 };
   int password_len = 0;
-  int skip_bytes = 0;
   int valid_token = 0;
   struct pam_conv *conv;
   const struct pam_message *pmsg[1];
