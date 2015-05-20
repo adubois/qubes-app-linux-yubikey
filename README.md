@@ -264,6 +264,7 @@ tree.
 
 Generate the build system using:
    $ cd qubes-app-linux-yubikey
+   $ libtoolize --install
    $ autoreconf --install
 
 
