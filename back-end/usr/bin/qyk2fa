@@ -1,2 +1,2 @@
 #!/bin/sh
-cat >/var/yubikey/yubikey.otp
+/usr/bin/head -c 32 >/var/yubikey/yubikey.otp
