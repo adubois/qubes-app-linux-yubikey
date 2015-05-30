@@ -92,29 +92,3 @@ check-doc-dist:
 	rm -f check-doc-dist.tmp
 	diff -ur $(srcdir)/README $(srcdir)/doc/ReadMe.asciidoc || \
 		(echo 'error: README and doc/ReadMe.asciidoc does not match!'; exit 1)
-
-PROJECT = qubes-yubico-pam
-
-release:
-	@if test -z "$(KEYID)"; then \
-		echo "Try this instead:"; \
-		echo "  make release KEYID=[PGPKEYID]"; \
-		echo "For example:"; \
-		echo "  make release KEYID=2117364A"; \
-		exit 1; \
-	fi
-	@head -3 $(srcdir)/NEWS | grep -q "Version $(VERSION) .released `date -I`" || \
-		(echo 'error: Update date/version in $(srcdir)/NEWS.'; exit 1)
-	@if test ! -d "$(QUBES_YUBICO_GITHUB_REPO)"; then \
-		echo "qubes-yubico.github.com repo not found!"; \
-		echo "Make sure that QUBES_YUBICO_GITHUB_REPO is set"; \
-		exit 1; \
-		fi
-	rm -f ChangeLog
-	make check-doc-dist ChangeLog distcheck
-	gpg --detach-sign --default-key $(KEYID) $(PACKAGE)-$(VERSION).tar.gz
-	gpg --verify $(PACKAGE)-$(VERSION).tar.gz.sig
-	cd $(srcdir) && git push
-	cd $(srcdir) && git tag -u $(KEYID)! -m $(VERSION) $(VERSION)
-	cd $(srcdir) && git push --tags
-	$(QUBES_YUBICO_GITHUB_REPO)/publish $(PROJECT) $(VERSION) $(PACKAGE)-$(VERSION).tar.gz*

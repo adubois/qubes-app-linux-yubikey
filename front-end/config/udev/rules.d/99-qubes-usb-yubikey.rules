@@ -1,2 +1,2 @@
-ACTION=="add", SUBSYSTEM=="hid", ATTRS{idVendor}=="1050", ATTRS{idProduct}=="0010", ENV{REMOVE_CMD}="/usr/local/lib/yubikey/ykputotp.py", RUN+="/usr/local/lib/yubikey/ykgetotp.py /dev/input/eventX"
+ACTION=="add", SUBSYSTEM=="input", ATTRS{idVendor}=="1050", KERNEL=="event*", ENV{ID_INPUT_KEYBOARD}=="1", ENV{REMOVE_CMD}="/usr/local/lib/yubikey/ykputotp.py", RUN+="/usr/local/lib/yubikey/ykgetotp.py $devname"
 
