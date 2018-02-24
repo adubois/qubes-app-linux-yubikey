@@ -1,30 +1,32 @@
 qubes-app-linux-yubikey
 =======================
 
-Module for Qubes OS to integrate Yubikey authentication through a USB VM
+Module for Qubes OS to integrate Yubikey hardware 2 factor authentication through
+a usbVM and a Dom0 PAM module.
 
 
 Description
 -----------
 
-The Qubes Yubikey provides an easy way to integrate the Yubikey into your
-existing Qubes user authentication in order to mitigate the risk of having
-someone or something snooping on your keyboard while you type your password.
+This package provides an easy way to integrate Yubikey hardware authentication
+into your existing Qubes user authentication in order to mitigate the risk of
+having someone or something snooping on your keyboard while you type your password.
 
 It has been designed to be used with a USB AppVM to protect against USB based
 attacks.
 
-http://www.yubico.com
-http://www.qubes-os.org
+https://www.yubico.com/
+https://www.qubes-os.org/
 
 
 Introduction
 ------------
 
-Qubes Yubikey is composed of a front-end which capture the Yubikey OTP, of a
-back-end which makes it available for consuption in dom0 and of a PAM Module
-which validates the OTP. A password can also be configured to be part of your
-credentials and mitigate the risk of getting your Yubikey lost or stolen.
+Qubes Yubikey is composed of a front-end which capture the Yubikey OTP,
+of a back-end which makes the Yubikey OTP available for consuption in dom0 and of a
+PAM Module which provide either 2 factors authentication by validating the Yubikey OTP
+and a password, or single factor authentication as a backup to mitigate the risk of
+loosing your Yubikey.
 
 To protect Dom0 from attacks via USB, a USB AppVM capturing all the PCI devices
 on which USB controllers are connected must be configured (with possibly the
@@ -39,8 +41,9 @@ The Qubes Yubikey front-end has been designed to be installed in a USB AppVM.
 After configuration, it will detect when you insert a Yubikey in your USB port.
 You then have to press the Yubikey button once. The OTP is captured by the Qubes
 Yubikey front-end. When you remove the Yubikey from the USB port, the Qubes
-Yubikey front-end detects this event and transmit via qrexec the OTP to Dom0.
-This behavior is to prevent you from forgetting your Yubikey in the USB port.
+Yubikey front-end detects this event and transmit via the Qubes OS protocol qrexec
+the OTP to Dom0. This behavior is to prevent you from forgetting your Yubikey in
+the USB port.
 
 The Qubes Yubikey back-end just take the OTP and store it in a file in Dom0.
 
@@ -59,11 +62,12 @@ successfully.
 
 If the authentication fails, you can try to retype the password and press enter
 as you may have done a typo.
-Do not generate a new OTP as you would expose yourself to hold and play attacks.
-The attacker could retain the first OTP until you issued a second one, at which
-time the attacker can send the first one, holding the next valid token
-for the next time you are away. This type of attacks would however only succeed
-if you typed a wrong password while the USB VM decided to hold your OTP.
+
+Note: Do not generate a second OTP as you would expose yourself to hold and play
+attacks. In this case the attacker would compromise your USB VM and retain the first
+OTP until you issued a second one, at which time the attacker can send the first OTP,
+holding the next valid one for when you are away. The attacker would also need to
+learn your password either via a camera, a microphone or a motion detector.
 
 Once you have typed the correct password, if the authentication fails, it is
 assumed that the USB VM may be compromised and the OTP authentication method
@@ -72,7 +76,7 @@ locks itself out.
 If you are not able to authenticate successfully following a Single Yubikey
 Insert/KeyPress/Remove you must not leave your laptop unattended as a valid OTP
 may have been held in the USB VM.
-You must go to a secure location to authenticate with your Unix password.
+You must go to a secure location to authenticate with your Unix backup password.
 Then check the value of last_login's first character.
 If 0 check the password you set in the xscreensaver PAM configuration.
 If the password is the one you typed you need to delete and recreate the USB VM
@@ -81,9 +85,9 @@ If 1 you will also need to
 
 Note that side channel attacks by sampling the USB port power current draw
 directly or indirectly during OTP generation may be able to compromise the AES
-key stored in your Yubikey as well as the power-up counter.
-Such type of attacks have been demonstrated, however as of Feb 2014 such attack
-as not been publicly demonstrated on Yubikey.
+(symetric) key stored in your Yubikey as well as the power-up counter.
+This type of attacks have been demonstrated on USB hardware, however as of Feb 2014
+such attack as not been publicly demonstrated on Yubikey.
 
 
 Qubes Yubikey PAM module logic
@@ -100,7 +104,7 @@ the USB port and that the counter is the next consecutive value only.
 Installation
 ------------
 
-You can install the package from Qubes repository.
+The aim is that you will be able to install the package from Qubes repository.
 
 First create a brand new USB AppVM. It is important that this VM is clean as
 you are going to use it initially to configure your Yubikey and set its AES
@@ -118,10 +122,10 @@ Once personalisation is done, you can destroy the USB VM and create a new one
 stalled data).
 
 you can then install in the USB VM's template the following:
-  $ sudo yum install qubes-yubikey-vm
+  $ sudo dnf install qubes-yubikey-vm
 
 And on dom0 install the Qubes Yubikey back-end and PAM modules:
-  $ sudo yum install qubes-yubikey-dom0
+  $ sudo dnf install qubes-yubikey-dom0
 
 
 Qubes Yubikey personalisation
@@ -203,9 +207,9 @@ The first value is:
 - 0 when the OTP authentication method is not compromised.
 - 1 when the OTP authentication method is compromised and locked.
 Re-setting this value to 0 should only be done during initial configuration
-with a new USB VM.
+with a new trusted USB VM.
 
-The second value is the last counter.
+The second value is the last Yubikey power-up counter.
 
 
 Feedback
@@ -250,15 +254,13 @@ side channel attacks (CPU L2 cache, power drain).
 Preparing the build
 -------------------
 
-You may check out the sources using Git with the following command:
-   $ mkdir ~/yubikey
-   $ cd ~/yubikey
+Create a new AppVM (a DispVM is sufficient if you only want to build and install).
+Launch a terminal in this VM and install the following:
+   $ sudo yum install pam-devel gettext-devel git libtool libyubikey libyubikey-devel -y
+   $ sudo yum group install "Development Tools" 
    $ git clone https://github.com/adubois/qubes-app-linux-yubikey.git
 
 This will create a directory 'qubes-app-linux-yubikey'.
-
-Autoconf, automake and libtool must be installed to create a compilable source
-tree.
 
 Generate the build system using:
    $ cd qubes-app-linux-yubikey
@@ -269,7 +271,7 @@ Generate the build system using:
 Building
 --------
 
-The build system uses Autoconf, to set up the build system run:
+The build system uses Autoconf, to set it up run:
   ./configure
 
 Then build the code, run the self-test and install the binaries:
