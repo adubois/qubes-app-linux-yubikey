@@ -1,1 +1,1 @@
-yubikey dom0 allow
+sys-usb dom0 allow
