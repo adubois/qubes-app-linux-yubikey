@@ -1,7 +1,7 @@
 qubes-app-linux-yubikey
 =======================
 
-Module for Qubes OS to integrate Yubikey hardware 2 factor authentication through
+Qubes Yubikey is a package offering to support Yubikey hardware 2 factor authentication through
 a usbVM and a Dom0 PAM module.
 
 
@@ -106,12 +106,20 @@ Installation
 
 The aim is that you will be able to install the package from Qubes repository.
 
+Note: For the moment please refer to the section `Preparing the build` to prepare,
+compile and install the package. The follow information is not yet application as
+a rpm package is not yet defined.
+
 First create a brand new USB AppVM. It is important that this VM is clean as
 you are going to use it initially to configure your Yubikey and set its AES
 symetric key.
 
 On this new USB AppVM install the Yubico personalisation package:
-  $ sudo yum install ykpers
+
+~~~
+sudo yum install ykpers
+~~~
+
 This package will install the Yubikey personalisation package to allow you to
 configure the Yubikey.
 This package will NOT be persisted after a reboot of the USB Ap-VM, which is
@@ -122,10 +130,65 @@ Once personalisation is done, you can destroy the USB VM and create a new one
 stalled data).
 
 you can then install in the USB VM's template the following:
-  $ sudo dnf install qubes-yubikey-vm
+
+~~~
+sudo dnf install qubes-yubikey-vm
+~~~
 
 And on dom0 install the Qubes Yubikey back-end and PAM modules:
-  $ sudo dnf install qubes-yubikey-dom0
+
+~~~
+sudo dnf install qubes-yubikey-dom0
+~~~
+
+
+Preparing the build
+-------------------
+
+Create a new AppVM (a DispVM is sufficient if you only want to build and install and
+don't want to hack into the project).
+
+Launch a terminal in this VM and install the following:
+
+~~~
+sudo yum install pam-devel gettext-devel git libtool libyubikey libyubikey-devel -y
+sudo yum group install "Development Tools" 
+git clone https://github.com/adubois/qubes-app-linux-yubikey.git
+~~~
+
+This will create a directory 'qubes-app-linux-yubikey'.
+
+Generate the build system using:
+
+~~~
+cd qubes-app-linux-yubikey
+libtoolize --install
+autoreconf --install
+~~~
+
+
+Building
+--------
+
+The build system uses Autoconf, to set it up run:
+
+~~~
+./configure
+~~~
+
+Finally build the code, run the self-test and package the binaries:
+
+~~~
+make check
+~~~
+
+Post build installation
+-----------------------
+
+The front-end and back-end folders contains the files to be installed in the
+USB VM and Dom0 respectively.
+
+From Dom0, you can pull the libraries and install them by calling pull_lib.sh
 
 
 Qubes Yubikey personalisation
@@ -193,8 +256,11 @@ Supported PAM module parameters are:
 
 If you are using "debug" you may find it useful to create a world-writable log
 file:
-  touch /var/run/pam-debug.log
-  chmod go+w /var/run/pam-debug.log
+
+~~~
+touch /var/run/pam-debug.log
+chmod go+w /var/run/pam-debug.log
+~~~
 
 
 Configuring last_login
@@ -232,8 +298,8 @@ this package note that the range specifies every single year in that
 closed interval.
 
 
-Build dependancies
-------------------
+Dependancies
+------------
 
 Qubes Yubikey has dependancies on libyubikey (yubikey.h, libyubikey.so) and
 pam-devel (security/pam_appl.h, libpam.so) installed.
@@ -244,44 +310,10 @@ Get libyubikey from
 
 It is also available in Fedora repository, so you can install it with:
 
-  yum install libyubikey libyubikey-devel
+~~~
+yum install libyubikey libyubikey-devel
+~~~
 
 Please note that AES encryption/decryption is hard coded in this library. This
 imply that a review of this code is recommended, particularly in the field of
 side channel attacks (CPU L2 cache, power drain).
-
-
-Preparing the build
--------------------
-
-Create a new AppVM (a DispVM is sufficient if you only want to build and install).
-Launch a terminal in this VM and install the following:
-   $ sudo yum install pam-devel gettext-devel git libtool libyubikey libyubikey-devel -y
-   $ sudo yum group install "Development Tools" 
-   $ git clone https://github.com/adubois/qubes-app-linux-yubikey.git
-
-This will create a directory 'qubes-app-linux-yubikey'.
-
-Generate the build system using:
-   $ cd qubes-app-linux-yubikey
-   $ libtoolize --install
-   $ autoreconf --install
-
-
-Building
---------
-
-The build system uses Autoconf, to set it up run:
-  ./configure
-
-Then build the code, run the self-test and install the binaries:
-  make check
-
-
-Post build installation
------------------------
-
-The front-end and back-end folders contains the files to be installed in the
-USB VM and Dom0 respectively.
-
-From Dom0, you can pull the libraries and install them by calling pull_lib.sh
