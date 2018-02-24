@@ -101,6 +101,33 @@ ensure that the OTP was generated as the first button press after insertion in
 the USB port and that the counter is the next consecutive value only.
 
 
+Preparing your yubikey
+----------------------
+
+In this section we will describe how to install the Yubikey personalization software and an example of use.
+
+Please note that usually your Yubikey has 2 slots or modes of usage (short press or long press of the key).
+One of these 2 slots will be dedicated to Qubes OS.
+
+In a trusted environment (i.e. no camera, collegue, etc...), launch a terminal in a disposable VM from the `start menu` / `Disposable Fedora 26 dvm` / `XTerm`.
+
+Install the Yubikey personalization tool:
+
+~~~
+sudo dnf install ykpers
+~~~
+
+Plug the Yubikey in your USB slot and use the Qubes ysstem tray applet to attach your USB Yubico Yubikey to your DispVM.
+
+Configure your Yubikey using ykpersonalize. Make sure that no flags are set (i.e. append-cr) and make sure that the entropie of your key is of good quality. Here is an example which use the random number generator of the DispVM:
+
+~~~
+ykinfo -v
+ykpersonalize -y -1 -o-append-cr
+~~~
+
+write down on a piece of paper the 32 hex key and shutdown the disposable vm.
+
 Installation
 ------------
 
@@ -110,26 +137,7 @@ Note: For the moment please refer to the section `Preparing the build` to prepar
 compile and install the package. The follow information is not yet application as
 a rpm package is not yet defined.
 
-First create a brand new USB AppVM. It is important that this VM is clean as
-you are going to use it initially to configure your Yubikey and set its AES
-symetric key.
-
-On this new USB AppVM install the Yubico personalisation package:
-
-~~~
-sudo yum install ykpers
-~~~
-
-This package will install the Yubikey personalisation package to allow you to
-configure the Yubikey.
-This package will NOT be persisted after a reboot of the USB Ap-VM, which is
-the desired behaviour as the USB AppVM may become compromised in the future.
-
-Once personalisation is done, you can destroy the USB VM and create a new one
-(not mandatory but recommended to mitigate against potential personalisation
-stalled data).
-
-you can then install in the USB VM's template the following:
+You can install in the USB VM the following:
 
 ~~~
 sudo dnf install qubes-yubikey-vm
@@ -138,17 +146,17 @@ sudo dnf install qubes-yubikey-vm
 And on dom0 install the Qubes Yubikey back-end and PAM modules:
 
 ~~~
-sudo dnf install qubes-yubikey-dom0
+sudo qubes-dom0-update qubes-yubikey-dom0
 ~~~
 
 
 Preparing the build
 -------------------
 
-Create a new AppVM (a DispVM is sufficient if you only want to build and install and
+Create a new DispVM is sufficient if you only want to build and install and
 don't want to hack into the project).
 
-Launch a terminal in this VM and install the following:
+Launch a new terminal in a new disposable VM and install the following:
 
 ~~~
 sudo yum install pam-devel gettext-devel git libtool libyubikey libyubikey-devel -y
